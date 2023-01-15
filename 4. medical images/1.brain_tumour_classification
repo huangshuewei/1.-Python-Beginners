@@ -1,0 +1,215 @@
+# -*- coding: utf-8 -*-
+"""
+Created on Wed Jan 11 17:36:38 2023
+
+@author: ASUS
+"""
+
+# data are MRI images of the brain with frontal, sagittal and transverse planes
+# Image size: (256, 256, 3)
+# Labels: 0 - no_tumor, 1 - glioma_tumor, 2 - meningioma_tumor, 3 - pituitary_tumor
+# URL: https://www.kaggle.com/datasets/sartajbhuvaji/brain-tumor-classification-mri
+
+import os
+import cv2
+import numpy as np
+import matplotlib.pyplot as plt
+import pandas as pd
+
+train_list = os.listdir("data/Training")
+test_list = os.listdir("data/Testing")
+x_train = []
+y_train = []
+x_test = []
+y_test = []
+IMG_SIZE = 224
+
+for _, classes in enumerate(train_list):
+    if classes == 'no_tumor':
+        img_list = os.listdir("data/Training/" + classes)
+        for i_imgs in range(len(img_list)):
+            img = cv2.imread("data/Training/" + classes +"/"+img_list[i_imgs])
+            img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+            img = cv2.resize(img,(IMG_SIZE,IMG_SIZE))
+            x_train.append(img)
+            y_train.append(0)
+    if classes == 'glioma_tumor':
+        img_list = os.listdir("data/Training/" + classes)
+        for i_imgs in range(len(img_list)):
+            img = cv2.imread("data/Training/" + classes +"/"+img_list[i_imgs])
+            img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+            img = cv2.resize(img,(IMG_SIZE,IMG_SIZE))
+            x_train.append(img)
+            y_train.append(1)
+    if classes == 'meningioma_tumor':
+        img_list = os.listdir("data/Training/" + classes)
+        for i_imgs in range(len(img_list)):
+            img = cv2.imread("data/Training/" + classes +"/"+img_list[i_imgs])
+            img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+            img = cv2.resize(img,(IMG_SIZE,IMG_SIZE))
+            x_train.append(img)
+            y_train.append(2)
+    if classes == 'pituitary_tumor':
+        img_list = os.listdir("data/Training/" + classes)
+        for i_imgs in range(len(img_list)):
+            img = cv2.imread("data/Training/" + classes +"/"+img_list[i_imgs])
+            img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+            img = cv2.resize(img,(IMG_SIZE,IMG_SIZE))
+            x_train.append(img)
+            y_train.append(3)
+
+'''
+for _, classes in enumerate(test_list):
+    if classes == 'no_tumor':
+        img_list = os.listdir("data/Testing/" + classes)
+        for i_imgs in range(len(img_list)):
+            img = cv2.imread("data/Testing/" + classes +"/"+img_list[i_imgs])
+            img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+            img = cv2.resize(img,(IMG_SIZE,IMG_SIZE))
+            x_test.append(img)
+            y_test.append(0)
+    if classes == 'glioma_tumor':
+        img_list = os.listdir("data/Testing/" + classes)
+        for i_imgs in range(len(img_list)):
+            img = cv2.imread("data/Testing/" + classes +"/"+img_list[i_imgs])
+            img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+            img = cv2.resize(img,(IMG_SIZE,IMG_SIZE))
+            x_test.append(img)
+            y_test.append(1)
+    if classes == 'meningioma_tumor':
+        img_list = os.listdir("data/Testing/" + classes)
+        for i_imgs in range(len(img_list)):
+            img = cv2.imread("data/Testing/" + classes +"/"+img_list[i_imgs])
+            img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+            img = cv2.resize(img,(IMG_SIZE,IMG_SIZE))
+            x_test.append(img)
+            y_test.append(2)
+    if classes == 'pituitary_tumor':
+        img_list = os.listdir("data/Testing/" + classes)
+        for i_imgs in range(len(img_list)):
+            img = cv2.imread("data/Testing/" + classes +"/"+img_list[i_imgs])
+            img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+            img = cv2.resize(img,(IMG_SIZE,IMG_SIZE))
+            x_test.append(img)
+            y_test.append(3)
+'''
+x_train = np.array(x_train)
+y_train = np.array(y_train)
+#x_test = np.array(x_test)
+#y_test = np.array(y_test)
+
+# how many original data in each class.
+# Bar chart
+plt.figure(figsize=(15, 6))
+plt.bar(['no_tumor',
+         'glioma_tumor',
+         'meningioma_tumor',
+         'pituitary_tumor'], 
+        [len(y_train[y_train==0]),
+         len(y_train[y_train==1]),
+         len(y_train[y_train==2]),
+         len(y_train[y_train==3])],
+         align='edge', width=0.3)
+
+# one-hot label
+y_train = pd.get_dummies(y_train)
+print(y_train.shape)
+
+# Do image augmentation
+# Add augmented data into original data
+# Expanded y_train as well
+from keras.preprocessing.image import ImageDataGenerator
+from sklearn.model_selection import train_test_split
+
+train_datagen = ImageDataGenerator(rotation_range=25,
+                                   width_shift_range=0.2,
+                                   height_shift_range=0.2,
+                                   shear_range=0.2,
+                                   horizontal_flip=True,
+                                   fill_mode='nearest'
+                                   )
+
+for i_aug in range(len(x_train)):
+    aug_img = train_datagen.flow(np.expand_dims(x_train[i_aug], axis=0),
+                                 batch_size =1, seed=10818755).next().astype('uint8')
+    x_train = np.append(x_train, aug_img, axis=0)
+
+y_train = pd.concat([y_train,y_train])
+
+# Show original and augmented data
+idx = 100
+plt.figure(figsize=(15, 6))
+plt.subplot(1,2,1)
+plt.imshow(x_train[idx])
+plt.subplot(1,2,2)
+plt.imshow(x_train[int(len(x_train)/2) + idx])
+
+x_train, x_test, y_train, y_test = train_test_split(
+    x_train, y_train, test_size=0.2, random_state=10818755
+    )
+
+x_train, x_val, y_train, y_val = train_test_split(
+    x_train, y_train, test_size=0.2, random_state=10818755
+    )
+
+
+# Build a Deep Learning model
+# Vgg19
+import keras
+from keras.applications.vgg19 import VGG19
+from keras import models, initializers
+from keras.layers import Flatten, Dense, Dropout
+
+vgg19_base_model = VGG19(weights = "imagenet", include_top=False, input_shape=(IMG_SIZE, IMG_SIZE,3))
+vgg19_model = models.Sequential()
+vgg19_model.add(vgg19_base_model)
+vgg19_model.add(Flatten())
+vgg19_model.add(Dense(128,
+                      kernel_initializer=initializers.random_normal(stddev=0.01),
+                      bias_initializer=initializers.Zeros(),
+                      activation='relu'))
+vgg19_model.add(Dropout(0.5))
+vgg19_model.add(Dense(4,
+                      kernel_initializer=initializers.random_normal(stddev=0.01),
+                      bias_initializer=initializers.Zeros(),
+                      activation='softmax'))
+print(vgg19_model.summary())
+
+# compile the model
+optimizer = keras.optimizers.Adam(learning_rate=0.001,
+                                  beta_1=0.9, 
+                                  beta_2=0.999)
+vgg19_model.compile(optimizer = optimizer, loss = 'categorical_crossentropy', metrics=['accuracy'])
+
+import tensorflow as tf
+
+# reduce_lr = keras.callbacks.ReduceLROnPlateau(monitor='val_loss', factor=0.2,
+#                                               patience=5, min_lr=0.000001)
+checkpointer = tf.keras.callbacks.ModelCheckpoint('vgg19_model.h5', verbose=1, save_best_only=True)
+callbacks = [checkpointer,
+             tf.keras.callbacks.EarlyStopping(patience=5, monitor='val_loss')]
+
+history = vgg19_model.fit(x_train, y_train, 
+                          epochs=50,
+                          batch_size=64,
+                          validation_data=(x_val,y_val),
+                          shuffle=True,
+                          callbacks=callbacks)
+
+# Evaluating model performance
+loss, acc = vgg19_model.evaluate(x_test, 
+                                 y_test, 
+                                 batch_size=8)
+
+print('\n\nMODEL\n\nLoss     : {} \nAccuracy : {}'.format(history.history['loss'][-1],history.history['accuracy'][-1]))
+print('\n\nMODEL\n\nLoss     : {} \nAccuracy : {}'.format(loss,acc))
+
+from sklearn.metrics import classification_report
+y_test_class = np.argmax(np.array(y_test), 1)
+y_pre = vgg19_model.predict(x_test)
+y_pre_class = np.argmax(y_pre, 1)
+
+print(classification_report(y_test_class, 
+                            y_pre_class, 
+                            target_names=['no_tumor', 'glioma_tumor', 'meningioma_tumor', 'pituitary_tumor']))
+
